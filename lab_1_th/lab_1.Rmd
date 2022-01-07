@@ -1,0 +1,96 @@
+---
+title: "ESM 244 Lab 1"
+author: "Tiffany Hsu"
+date: "1/6/2022"
+output: html_document
+---
+
+```{r setup, include = TRUE, warning = FALSE, message = FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+
+library(tidyverse)
+library(here)
+library(sf)
+library(tmap)
+
+# to update packages use `update.packages(ask = FALSE)`
+```
+
+### Reading in data
+
+```{r}
+sf_trees <- read_csv(here("data", "sf_trees", "sf_trees.csv"), show_col_types = FALSE) # wont show the column types
+```
+
+### Part 1: wrangling and ggplot review
+
+**Example 1:** Find counts of observations by `legal_status` & wrangle a bit.
+
+```{r}
+### method 1: `group_by() %>% summarize()
+sf_trees %>% 
+  group_by(legal_status) %>% 
+  summarize(tree_count = n())
+
+### method 2: different way plus a few new functions
+top_5_status <- sf_trees %>% 
+  count(legal_status) %>% 
+  drop_na(legal_status) %>% 
+  rename(tree_count = n) %>% 
+  relocate(tree_count, 1) %>% # reorder columns
+  slice_max(tree_count, n =5) %>% # takes top 5 highest values
+  arrange(desc(tree_count)) # highest to lowest value sort
+```
+
+Make a graph of the top 5 from above
+```{r}
+ggplot(data = top_5_status, aes(x = fct_reorder(legal_status, tree_count), #fct_reorder orders from smallest to largest # of trees
+                                y = tree_count)) +
+  geom_col(fill = 'darkgreen') +
+  labs(x = 'Legal status',
+       y = 'Tree count') +
+   coord_flip() + #will flip the axis labels so they fit the entire word
+  theme_minimal()
+  
+```
+
+**Example 2:** Only going to keep observations where legal status is "Permitted Site" and caretaker is "MTA", and store as `permitted_data_df`
+
+```{r}
+# sf_trees$legal_status %>% unique() # checks for unique values
+permitted_data_df <- sf_trees %>% 
+  filter(legal_status == "Permitted Site", 
+         caretaker == "MTA")
+```
+
+**Example 3:** Only keep Blackwood Acacia trees, and then only keep columns `legal_status`, `date`, `latitude`. and store as `blackwood_acacia_df`
+```{r}
+blackwood_acacia_df <- sf_trees %>% 
+  filter(str_detect(species, 'Blackwood Acacia')) %>% 
+  select(legal_status, date, lat = latitude, lon = longitude)
+
+# Make a little graph of locations
+ggplot(data = blackwood_acacia_df, aes(x = lon, y = lat)) +
+  geom_point(color = "darkgreen") 
+```
+
+**Example 4:** use `tidyr::separate()` to separate words in a column into two separate columns
+
+```{r}
+sf_trees_map <- sf_trees %>% 
+  separate(species, into = c('spp_scientific', 'spp_common'), sep = '::')
+```
+
+**Example 5:** use `tidyr::unite()`
+
+```{r}
+ex_5 <- sf_trees %>% 
+  unite('id_status', tree_id, legal_status, sep = ' ADDING THIS ')
+```
+
+
+
+
+
+
+
